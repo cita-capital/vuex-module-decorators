@@ -17,12 +17,24 @@ function registerDynamicModule<S>(module: Mod<S, any>, modOpt: DynamicModuleOpti
   if (!modOpt.store) {
     throw new Error('Store not provided in decorator options when using dynamic option')
   }
-
-  modOpt.store.registerModule(
-    modOpt.name, // TODO: Handle nested modules too in future
-    module,
-    { preserveState: modOpt.preserveState || false }
-  )
+  if (import.meta.hot) {
+    if (modOpt.store.hasModule(modOpt.name)) {
+      // 如果遇到重複模塊直接刷新頁面
+      modOpt.store.hotUpdate({
+        modules: {
+          [modOpt.name]: module
+        }
+      })
+      return
+    }
+    modOpt.store.registerModule(modOpt.name, module, {
+      preserveState: modOpt.preserveState || false
+    })
+  } else {
+    modOpt.store.registerModule(modOpt.name, module, {
+      preserveState: modOpt.preserveState || false
+    })
+  }
 }
 
 function addGettersToModule<S>(

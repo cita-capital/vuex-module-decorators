@@ -25,6 +25,25 @@ function getModuleName(module) {
 }
 
 class VuexModule {
+    /*
+     * To use with `extends Class` syntax along with decorators
+     */
+    static namespaced;
+    static state;
+    static getters;
+    static actions;
+    static mutations;
+    static modules;
+    /*
+     * To use with `new VuexModule(<ModuleOptions>{})` syntax
+     */
+    modules;
+    namespaced;
+    getters;
+    state;
+    mutations;
+    actions;
+    context;
     constructor(module) {
         this.actions = module.actions;
         this.mutations = module.mutations;
@@ -154,8 +173,25 @@ function registerDynamicModule(module, modOpt) {
     if (!modOpt.store) {
         throw new Error('Store not provided in decorator options when using dynamic option');
     }
-    modOpt.store.registerModule(modOpt.name, // TODO: Handle nested modules too in future
-    module, { preserveState: modOpt.preserveState || false });
+    if (import.meta.hot) {
+        if (modOpt.store.hasModule(modOpt.name)) {
+            // 如果遇到重複模塊直接刷新頁面
+            modOpt.store.hotUpdate({
+                modules: {
+                    [modOpt.name]: module
+                }
+            });
+            return;
+        }
+        modOpt.store.registerModule(modOpt.name, module, {
+            preserveState: modOpt.preserveState || false
+        });
+    }
+    else {
+        modOpt.store.registerModule(modOpt.name, module, {
+            preserveState: modOpt.preserveState || false
+        });
+    }
 }
 function addGettersToModule(targetModule, srcModule) {
     Object.getOwnPropertyNames(srcModule.prototype).forEach((funcName) => {
